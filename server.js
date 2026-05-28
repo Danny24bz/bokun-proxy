@@ -1,76 +1,48 @@
 const express = require("express");
-const cors    = require("cors");
-const crypto  = require("crypto");
+const cors = require("cors");
+const crypto = require("crypto");
+const https = require("https");
 
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-const BOKUN_ACCESS_KEY = process.env.BOKUN_ACCESS_KEY;
-const BOKUN_SECRET_KEY = process.env.BOKUN_SECRET_KEY;
-const BOKUN_BASE_URL   = "https://api.bokun.io";
+const ACCESS_KEY = process.env.BOKUN_ACCESS_KEY;
+const SECRET_KEY = process.env.BOKUN_SECRET_KEY;
 
-function buildHeaders(method, path) {
-  const date    = new Date().toISOString().replace("T", " ").substring(0, 19);
-  const message = date + BOKUN_ACCESS_KEY + method.toUpperCase() + path;
-  const sig     = crypto.createHmac("sha1", BOKUN_SECRET_KEY).update(message).digest("base64");
-  return {
-    "X-Bokun-Date":      date,
-    "X-Bokun-AccessKey": BOKUN_ACCESS_KEY,
-    "X-Bokun-Signature": sig,
-    "Content-Type":      "application/json;charset=UTF-8",
-    "Accept":            "application/json"
+function bokun(method, path, body, cb) {
+  const date = new Date().toISOString().replace("T"," ").substring(0,19);
+  const sig = crypto.createHmac("sha1", SECRET_KEY).update(date + ACCESS_KEY + method + path).digest("base64");
+  const opts = {
+    hostname: "api.bokun.io", path, method,
+    headers: { "X-Bokun-Date": date, "X-Bokun-AccessKey": ACCESS_KEY, "X-Bokun-Signature": sig, "Content-Type": "application/json;charset=UTF-8" }
   };
+  const req = https.request(opts, res => {
+    let d = "";
+    res.on("data", c => d += c);
+    res.on("end", () => cb(null, res.statusCode, d));
+  });
+  req.on("error", e => cb(e));
+  if (body) req.write(JSON.stringify(body));
+  req.end();
 }
 
-app.get("/", (req, res) => {
-  res.json({ status: "ok", service: "Bókun Proxy", vendor: process.env.BOKUN_VENDOR_ID });
+app.get("/", (_, res) => res.json({ status: "ok" }));
+
+app.post("/proxy", (req, res) => {
+  const path = req.query.path;
+  bokun("POST", path, req.body, (err, status, data) => {
+    if (err) return res.status(500).json({ error: err.message });
+    try { res.status(status).json(JSON.parse(data)); } catch { res.status(status).send(data); }
+  });
 });
 
-app.post("/proxy", async (req, res) => {
-  const bokunPath = req.query.path;
-  if (!bokunPath) return res.status(400).json({ error: "Missing ?path= param" });
-
-  try {
-    const headers  = buildHeaders("POST", bokunPath);
-    const url      = BOKUN_BASE_URL + bokunPath;
-    console.log("POST", url);
-    console.log("Headers:", JSON.stringify(headers));
-    console.log("Body:", JSON.stringify(req.body));
-
-    const response = await fetch(url, {
-      method:  "POST",
-      headers,
-      body:    JSON.stringify(req.body)
-    });
-
-    const text = await response.text();
-    console.log("Bókun response:", response.status, text.substring(0, 500));
-
-    let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    res.status(response.status).json(data);
-  } catch (err) {
-    console.error("Proxy error:", err);
-    res.status(500).json({ error: err.message });
-  }
+app.get("/proxy", (req, res) => {
+  const path = req.query.path;
+  bokun("GET", path, null, (err, status, data) => {
+    if (err) return res.status(500).json({ error: err.message });
+    try { res.status(status).json(JSON.parse(data)); } catch { res.status(status).send(data); }
+  });
 });
 
-app.get("/proxy", async (req, res) => {
-  const bokunPath = req.query.path;
-  if (!bokunPath) return res.status(400).json({ error: "Missing ?path= param" });
-
-  try {
-    const headers  = buildHeaders("GET", bokunPath);
-    const response = await fetch(BOKUN_BASE_URL + bokunPath, { method: "GET", headers });
-    const text     = await response.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    res.status(response.status).json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Bókun proxy running on port ${PORT}`));
+app.listen(process.env.PORT || 3000, () => console.log("Proxy running"));
