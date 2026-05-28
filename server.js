@@ -82,7 +82,7 @@ app.post("/extract", async (req, res) => {
 
 app.post("/push", async (req, res) => {
   const payload = req.body;
-  const path = "/activity.json/save-activity";
+  const path = "/restapi/v2.0/experience";
   try {
     const result = await httpsPost("api.bokun.io", path, bokunHeaders("POST", path), payload);
     console.log("Bokun response:", result.status, result.body.substring(0, 200));
