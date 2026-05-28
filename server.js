@@ -88,7 +88,7 @@ app.post("/push", async (req, res) => {
     shortDescription: data.shortDescription ?? "",
     description: data.description ?? "",
     duration: data.duration ?? { hours: 5, minutes: 0 },
-    location: data.location ?? {},
+    location: { name: data.location?.description ?? "", countryCode: "BZ", city: "Belize City" },
     inclusions: data.inclusions ?? "",
     exclusions: data.exclusions ?? "",
     cancellationPolicy: data.cancellationPolicy ?? "",
