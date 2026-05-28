@@ -65,7 +65,7 @@ app.post("/push", async (req, res) => {
     meetingType: { type: "MEET_ON_LOCATION", meetingPointAddresses: [{ title: meetPt, address: { addressLine1: meetPt, city: "Belize City", countryCode: "BZ" } }], dropoffService: false },
     boxSettings: { isBox: false },
     activation: { activated: false },
-    pricingCategories: [],
+    pricingCategories: { categories: pricing },
     availabilityRules: []
   };
   try {
