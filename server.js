@@ -117,7 +117,7 @@ app.post("/push", async (req, res) => {
       meetingPointAddresses: [{
         title: data.meetingPoint || locName,
         address: {
-          address1: data.meetingPoint || locName,
+          addressLine1: data.meetingPoint || locName,
           city: "Belize City",
           countryCode: "BZ"
         }
