@@ -50,34 +50,40 @@ function bokunHeaders(method, path) {
 
 app.get("/", (_, res) => res.json({ status: "ok", service: "Bokun Proxy" }));
 
-app.post("/extract", async (req, res) => {
-  const { proposal } = req.body;
-  if (!proposal) return res.status(400).json({ error: "Missing proposal" });
-  const key = (ANTHROPIC_KEY || "").trim();
-  console.log("ANTHROPIC_KEY length:", key.length, "starts:", key.substring(0, 10));
+app.post("/push", async (req, res) => {
+  const data = req.body;
+  const path = "/restapi/v2.0/experience";
+  const payload = {
+    title: data.title ?? "New Experience",
+    shortDescription: data.shortDescription ?? "",
+    description: data.description ?? "",
+    duration: data.duration ?? { hours: 5, minutes: 0 },
+    location: {
+      name: data.location?.description ?? "Belize City",
+      countryCode: "BZ",
+      city: "Belize City"
+    },
+    inclusions: [],
+    exclusions: [],
+    bookingType: { type: "DATE_AND_TIME" },
+    capacityType: { type: "LIMITED" },
+    meetingType: { type: "MEET_ON_LOCATION" },
+    type: "EXPERIENCE",
+    pricingCategories: [],
+    rates: []
+  };
   try {
-    const result = await httpsPost("api.anthropic.com", "/v1/messages", {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01"
-    }, {
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.",
-      messages: [{ role: "user", content: "Extract from:\n\n" + proposal }]
-    });
-    console.log("Anthropic status:", result.status, result.body.substring(0, 200));
-    const data = JSON.parse(result.body);
-    if (data.error) return res.status(400).json({ error: data.error.message });
-    const raw = data.content.find(b => b.type === "text").text;
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("No JSON found in response");
-    const extracted = JSON.parse(match[0]);
-    res.json({ success: true, data: extracted });
+    const result = await httpsPost("api.bokun.io", path, bokunHeaders("POST", path), payload);
+    console.log("Bokun response:", result.status, result.body.substring(0, 300));
+    let json;
+    try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
+    res.status(result.status).json(json);
   } catch (e) {
-    console.error("Extract error:", e.message);
+    console.error("Push error:", e.message);
     res.status(500).json({ error: e.message });
   }
+});
+This fixes bookingType, capacityType and meetingType all at once. Commit and tell me when Deployment successful.Sonnet 4.6
 });
 
 app.post("/push", async (req, res) => {
