@@ -1,6 +1,6 @@
 const express = require("express");
-const https   = require("https");
-const crypto  = require("crypto");
+const https = require("https");
+const crypto = require("crypto");
 
 const app = express();
 
@@ -14,15 +14,17 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-const ACCESS_KEY    = process.env.BOKUN_ACCESS_KEY;
-const SECRET_KEY    = process.env.BOKUN_SECRET_KEY;
+const ACCESS_KEY = process.env.BOKUN_ACCESS_KEY;
+const SECRET_KEY = process.env.BOKUN_SECRET_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 function httpsPost(hostname, path, headers, body) {
   return new Promise((resolve, reject) => {
     const bodyStr = JSON.stringify(body);
     const opts = {
-      hostname, path, method: "POST",
+      hostname,
+      path,
+      method: "POST",
       headers: { ...headers, "Content-Length": Buffer.byteLength(bodyStr) }
     };
     const req = https.request(opts, res => {
@@ -38,7 +40,9 @@ function httpsPost(hostname, path, headers, body) {
 
 function bokunHeaders(method, path) {
   const date = new Date().toISOString().replace("T", " ").substring(0, 19);
-  const sig = crypto.createHmac("sha1", SECRET_KEY).update(date + ACCESS_KEY + method + path).digest("base64");
+  const sig = crypto.createHmac("sha1", SECRET_KEY)
+    .update(date + ACCESS_KEY + method + path)
+    .digest("base64");
   return {
     "X-Bokun-Date": date,
     "X-Bokun-AccessKey": ACCESS_KEY,
@@ -50,68 +54,91 @@ function bokunHeaders(method, path) {
 
 app.get("/", (_, res) => res.json({ status: "ok", service: "Bokun Proxy" }));
 
-app.post("/push", async (req, res) => {
-  const data = req.body;
-  const path = "/restapi/v2.0/experience";
-  const payload = {
-    title: data.title ?? "New Experience",
-    shortDescription: data.shortDescription ?? "",
-    description: data.description ?? "",
-    duration: data.duration ?? { hours: 5, minutes: 0 },
-    location: {
-      name: data.location?.description ?? "Belize City",
-      countryCode: "BZ",
-      city: "Belize City"
-    },
-    inclusions: [],
-    exclusions: [],
-    bookingType: { type: "DATE_AND_TIME" },
-    capacityType: { type: "LIMITED" },
-    meetingType: { type: "MEET_ON_LOCATION" },
-    type: "EXPERIENCE",
-    pricingCategories: [],
-    rates: []
-  };
+app.post("/extract", async (req, res) => {
+  const { proposal } = req.body;
+  if (!proposal) return res.status(400).json({ error: "Missing proposal" });
   try {
-    const result = await httpsPost("api.bokun.io", path, bokunHeaders("POST", path), payload);
-    console.log("Bokun response:", result.status, result.body.substring(0, 300));
-    let json;
-    try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
-    res.status(result.status).json(json);
+    const result = await httpsPost(
+      "api.anthropic.com",
+      "/v1/messages",
+      {
+        "Content-Type": "application/json",
+        "x-api-key": (ANTHROPIC_KEY || "").trim(),
+        "anthropic-version": "2023-06-01"
+      },
+      {
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.",
+        messages: [{ role: "user", content: "Extract from:\n\n" + proposal }]
+      }
+    );
+    const data = JSON.parse(result.body);
+    if (data.error) return res.status(400).json({ error: data.error.message });
+    const raw = data.content.find(b => b.type === "text").text;
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found");
+    res.json({ success: true, data: JSON.parse(match[0]) });
   } catch (e) {
-    console.error("Push error:", e.message);
     res.status(500).json({ error: e.message });
   }
-});
-This fixes bookingType, capacityType and meetingType all at once. Commit and tell me when Deployment successful.Sonnet 4.6
 });
 
 app.post("/push", async (req, res) => {
   const data = req.body;
   const path = "/restapi/v2.0/experience";
+
+  function parseDur(dur) {
+    if (!dur) return { hours: 5, minutes: 0 };
+    if (typeof dur === "object") return dur;
+    const h = dur.match(/(\d+)\s*h/i);
+    const m = dur.match(/(\d+)\s*m/i);
+    return { hours: h ? parseInt(h[1]) : 5, minutes: m ? parseInt(m[1]) : 0 };
+  }
+
+  const locName = typeof data.location === "object"
+    ? (data.location.description || data.location.name || "Belize City")
+    : (data.location || "Belize City");
+
   const payload = {
-    title: data.title ?? "New Experience",
-    shortDescription: data.shortDescription ?? "",
-    description: data.description ?? "",
-    duration: data.duration ?? { hours: 5, minutes: 0 },
-    location: { name: data.location?.description ?? "", countryCode: "BZ", city: "Belize City" },
-    inclusions: [],
-    exclusions: [],
+    title: data.productName || "New Experience",
+    shortDescription: (data.description || "").substring(0, 200),
+    description: data.description || "",
+    duration: parseDur(data.duration),
+    location: {
+      name: locName,
+      countryCode: "BZ",
+      city: "Belize City"
+    },
     bookingType: "DATE_AND_TIME",
     capacityType: "LIMITED",
-    meetingType: "MEET_ON_LOCATION",
-    type: "EXPERIENCE",
-    pricingCategories: data.pricingCategories ?? [],
-    rates: data.rates ?? []
+    meetingType: {
+      type: "MEET_ON_LOCATION",
+      meetingPointAddresses: [{
+        title: data.meetingPoint || locName,
+        address: {
+          address1: data.meetingPoint || locName,
+          city: "Belize City",
+          countryCode: "BZ"
+        }
+      }],
+      dropoffService: false
+    },
+    type: "EXPERIENCE"
   };
+
   try {
-    const result = await httpsPost("api.bokun.io", path, bokunHeaders("POST", path), payload);
-    console.log("Bokun response:", result.status, result.body.substring(0, 300));
+    const result = await httpsPost(
+      "api.bokun.io",
+      path,
+      bokunHeaders("POST", path),
+      payload
+    );
+    console.log("Bokun:", result.status, result.body.substring(0, 200));
     let json;
     try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
     res.status(result.status).json(json);
   } catch (e) {
-    console.error("Push error:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
