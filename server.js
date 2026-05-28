@@ -56,7 +56,8 @@ app.post("/push", async (req, res) => {
   const dur = parseDur(data.duration);
   const payload = {
     title: data.productName || "New Experience",
-    description: { shortDescription: (data.description || "").substring(0, 200), fullDescription: data.description || "" },
+    shortDescription: (data.description || "").substring(0, 200),
+    description: data.description || "",
     duration: { hours: dur.hours, minutes: dur.minutes },
     location: { name: locName, countryCode: "BZ", city: "Belize City" },
     bookingType: "DATE_AND_TIME",
