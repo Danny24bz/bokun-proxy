@@ -81,11 +81,27 @@ app.post("/extract", async (req, res) => {
 });
 
 app.post("/push", async (req, res) => {
-  const payload = req.body;
+  const data = req.body;
   const path = "/restapi/v2.0/experience";
+  const payload = {
+    title: data.title ?? "New Experience",
+    shortDescription: data.shortDescription ?? "",
+    description: data.description ?? "",
+    duration: data.duration ?? { hours: 5, minutes: 0 },
+    location: data.location ?? {},
+    inclusions: data.inclusions ?? "",
+    exclusions: data.exclusions ?? "",
+    cancellationPolicy: data.cancellationPolicy ?? "",
+    bookingType: "DATE_AND_TIME",
+    capacityType: "LIMITED",
+    meetingType: "MEET_ON_LOCATION",
+    type: "EXPERIENCE",
+    pricingCategories: data.pricingCategories ?? [],
+    rates: data.rates ?? []
+  };
   try {
     const result = await httpsPost("api.bokun.io", path, bokunHeaders("POST", path), payload);
-    console.log("Bokun response:", result.status, result.body.substring(0, 200));
+    console.log("Bokun response:", result.status, result.body.substring(0, 300));
     let json;
     try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
     res.status(result.status).json(json);
