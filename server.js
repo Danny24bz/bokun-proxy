@@ -59,7 +59,7 @@ app.post("/extract", async (req, res) => {
       "x-api-key": ANTHROPIC_KEY,
       "anthropic-version": "2023-06-01"
     }, {
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 1000,
       system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.",
       messages: [{ role: "user", content: "Extract from:\n\n" + proposal }]
