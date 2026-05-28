@@ -76,3 +76,16 @@ app.post("/push", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
+app.get("/getproduct", async (req, res) => {
+  const path = "/restapi/v2.0/experience/1195229/components?componentType=PRICING_CATEGORIES&componentType=RATES";
+  try {
+    const date = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const sig = crypto.createHmac("sha1", SECRET_KEY).update(date + ACCESS_KEY + "GET" + path).digest("base64");
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({ hostname: "api.bokun.io", path, method: "GET", headers: { "X-Bokun-Date": date, "X-Bokun-AccessKey": ACCESS_KEY, "X-Bokun-Signature": sig, "Accept": "application/json" } }, r => { let d = ""; r.on("data", c => d += c); r.on("end", () => resolve(d)); });
+      req.on("error", reject);
+      req.end();
+    });
+    res.send(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
