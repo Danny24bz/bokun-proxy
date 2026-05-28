@@ -124,7 +124,7 @@ app.post("/push", async (req, res) => {
       }],
       dropoffService: false
     },
-    type: "EXPERIENCE"
+    type: "DAY_TOUR_OR_ACTIVITY"
   };
 
   try {
