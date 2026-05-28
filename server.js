@@ -70,7 +70,9 @@ app.post("/extract", async (req, res) => {
     const data = JSON.parse(result.body);
     if (data.error) return res.status(400).json({ error: data.error.message });
     const raw = data.content.find(b => b.type === "text").text;
-    const extracted = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found in response");
+    const extracted = JSON.parse(match[0]);
     res.json({ success: true, data: extracted });
   } catch (e) {
     console.error("Extract error:", e.message);
