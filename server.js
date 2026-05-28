@@ -53,10 +53,12 @@ app.get("/", (_, res) => res.json({ status: "ok", service: "Bokun Proxy" }));
 app.post("/extract", async (req, res) => {
   const { proposal } = req.body;
   if (!proposal) return res.status(400).json({ error: "Missing proposal" });
+  const key = (ANTHROPIC_KEY || "").trim();
+  console.log("ANTHROPIC_KEY length:", key.length, "starts:", key.substring(0, 10));
   try {
     const result = await httpsPost("api.anthropic.com", "/v1/messages", {
       "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_KEY,
+      "x-api-key": key,
       "anthropic-version": "2023-06-01"
     }, {
       model: "claude-sonnet-4-6",
@@ -64,7 +66,9 @@ app.post("/extract", async (req, res) => {
       system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.",
       messages: [{ role: "user", content: "Extract from:\n\n" + proposal }]
     });
+    console.log("Anthropic status:", result.status, result.body.substring(0, 200));
     const data = JSON.parse(result.body);
+    if (data.error) return res.status(400).json({ error: data.error.message });
     const raw = data.content.find(b => b.type === "text").text;
     const extracted = JSON.parse(raw.replace(/```json|```/g, "").trim());
     res.json({ success: true, data: extracted });
