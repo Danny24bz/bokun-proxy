@@ -50,17 +50,17 @@ app.get("/getproduct", async (req, res) => {
 });
 
 app.post("/extract", async (req, res) => {
-  const { proposal } = req.body;
+  const proposal = req.body.proposal;
   if (!proposal) return res.status(400).json({ error: "Missing proposal" });
   try {
     const bodyStr = JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.", messages: [{ role: "user", content: "Extract from:\n\n" + proposal }] });
     const result = await new Promise((resolve, reject) => {
-      const req = https.request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => {
+      const r = https.request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => {
         let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d }));
       });
-      req.on("error", reject);
-      req.write(bodyStr);
-      req.end();
+      r.on("error", reject);
+      r.write(bodyStr);
+      r.end();
     });
     const data = JSON.parse(result.body);
     if (data.error) return res.status(400).json({ error: data.error.message });
@@ -77,15 +77,19 @@ app.post("/push", async (req, res) => {
   function parseDur(dur) {
     if (!dur) return { hours: 5, minutes: 0 };
     if (typeof dur === "object") return dur;
-    const h = dur.match(/(\d+)\s*h/i), m = dur.match(/(\d+)\s*m/i);
+    const h = dur.match(/(\d+)\s*h/i);
+    const m = dur.match(/(\d+)\s*m/i);
     return { hours: h ? parseInt(h[1]) : 5, minutes: m ? parseInt(m[1]) : 0 };
   }
   const locName = typeof data.location === "object" ? (data.location.description || data.location.name || "Belize City") : (data.location || "Belize City");
   const meetPt = data.meetingPoint || locName;
   const dur = parseDur(data.duration);
   const capacity = data.capacity ? Number(String(data.capacity).replace(/\D/g, "")) || 14 : 14;
-  const adultPrice = (data.pricingCategories && data.pricingCategories.find(p => p.category === "Adult" || p.category === "adult")) ? data.pricingCategories.find(p => p.category === "Adult" || p.category === "adult").price * 100 : 8500;
-  const childPrice = (data.pricingCategories && data.pricingCategories.find(p => p.category === "Child" || p.category === "child")) ? data.pricingCategories.find(p => p.category === "Child" || p.category === "child").price * 100 : 4500;
+  const cats = data.pricingCategories || [];
+  const adult = cats.find(p => /adult/i.test(p.category));
+  const child = cats.find(p => /child/i.test(p.category));
+  const adultAmt = adult ? adult.price * 100 : 8500;
+  const childAmt = child ? child.price * 100 : 4500;
   const payload = {
     title: data.productName || "New Experience",
     shortDescription: (data.description || "").substring(0, 200),
@@ -95,28 +99,4 @@ app.post("/push", async (req, res) => {
     bookingType: "DATE_AND_TIME",
     capacityType: "LIMITED",
     capacity: capacity,
-    meetingType: [{ title: meetPt, address: { addressLine1: meetPt, city: "Belize City", countryCode: "BZ" } }], dropoffService: false },
-    boxSettings: { isBox: false },
-    activation: { active: false },
-    pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
-    rates: {
-      defaultRate: { id: 2364854 },
-      rates: [{
-        id: 2364854,
-        pricesByCategory: [
-          { id: 1153185, amount: { amount: adultPrice, currency: "USD" } },
-          { id: 1153187, amount: { amount: childPrice, currency: "USD" } }
-        ]
-      }]
-    },
-    availabilityRules: [{ frequency: "DAILY", startTime: "08:00", capacity: capacity }]
-  };
-  try {
-    const result = await bokunPost(path, payload);
-    console.log("Bokun:", result.status, result.body.substring(0, 300));
-    let json; try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
-    res.status(result.status).json(json);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
+    meetingType: { type: "MEET_ON_LOCAT
