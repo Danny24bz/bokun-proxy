@@ -113,4 +113,50 @@ app.post("/push", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// DRAFT endpoint — Claude message drafting for Communication Agent
+app.post("/draft", async (req, res) => {
+  const { name, context, tone, channel } = req.body;
+  if (!context) return res.status(400).json({ error: "Missing context" });
+  const toneMap = { professional: "professional and warm", urgent: "urgent but respectful", nurture: "gentle and helpful", confirmation: "clear and reassuring", proposal: "confident and professional" };
+  const isShort = channel === "sms" || channel === "whatsapp";
+  const prompt = `You are the Communication Agent for Darwin McCulloch, a Belize-based strategy consultant and tour operator. Write a ${isShort ? "short SMS under 160 characters" : "professional email"} to ${name || "the recipient"} with a ${toneMap[tone] || "professional and warm"} tone. Context: ${context}. Sign as Darwin McCulloch. Return only the message text, nothing else.`;
+  try {
+    const bodyStr = JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: prompt }] });
+    const result = await new Promise((resolve, reject) => {
+      const r = require("https").request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => {
+        let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d }));
+      });
+      r.on("error", reject); r.write(bodyStr); r.end();
+    });
+    const data = JSON.parse(result.body);
+    if (data.error) return res.status(400).json({ error: data.error.message });
+    const text = data.content.find(b => b.type === "text").text;
+    res.json({ success: true, message: text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SMS endpoint — Twilio SMS sending for Communication Agent
+app.post("/sms", async (req, res) => {
+  const { to, body, from } = req.body;
+  if (!to || !body) return res.status(400).json({ error: "Missing to or body" });
+  const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+  const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+  const TWILIO_FROM = from || process.env.TWILIO_PHONE_NUMBER;
+  if (!TWILIO_SID || !TWILIO_TOKEN) return res.status(400).json({ error: "Twilio credentials not configured" });
+  try {
+    const formBody = `To=${encodeURIComponent(to)}&From=${encodeURIComponent(TWILIO_FROM)}&Body=${encodeURIComponent(body)}`;
+    const auth = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString("base64");
+    const result = await new Promise((resolve, reject) => {
+      const r = require("https").request({ hostname: "api.twilio.com", path: `/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`, method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded", "Authorization": `Basic ${auth}`, "Content-Length": Buffer.byteLength(formBody) } }, res => {
+        let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d }));
+      });
+      r.on("error", reject); r.write(formBody); r.end();
+    });
+    const data = JSON.parse(result.body);
+    if (data.sid) { res.json({ success: true, sid: data.sid, status: data.status }); }
+    else { res.status(400).json({ error: data.message || "SMS failed" }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
