@@ -1,0 +1,38 @@
+name: Deploy and Verify Bokun Proxy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify server.js syntax
+        run: node --check server.js
+
+      - name: Wait for Railway deploy
+        run: sleep 30
+
+      - name: Test proxy health
+        run: |
+          curl -f https://bokun-proxy-production.up.railway.app/ || exit 1
+
+      - name: Test Bokun connection
+        run: |
+          curl -f https://bokun-proxy-production.up.railway.app/getproduct || exit 1
+
+      - name: Confirm complete
+        run: echo "Bokun proxy verified and live"
