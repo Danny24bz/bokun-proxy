@@ -53,7 +53,7 @@ app.post("/extract", async (req, res) => {
   const proposal = req.body.proposal;
   if (!proposal) return res.status(400).json({ error: "Missing proposal" });
   try {
-    const bodyStr = JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.", messages: [{ role: "user", content: "Extract from:\n\n" + proposal }] });
+    const bodyStr = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: "Extract tour product details and return ONLY valid JSON with these exact keys: productName, description, duration, pricingCategories (array of {category,price,currency}), capacity, location, inclusions (string array), exclusions (string array), availabilityWindows, cancellationPolicy, meetingPoint, notes. Null for missing fields. No markdown, no backticks.", messages: [{ role: "user", content: "Extract from:\n\n" + proposal }] });
     const result = await new Promise((resolve, reject) => {
       const r = https.request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => {
         let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d }));
@@ -127,7 +127,7 @@ app.post("/draft", async (req, res) => {
     prompt = `You are the Communication Agent for Darwin McCulloch, a Belize-based strategy consultant and tour operator. Write a ${isShort ? "short SMS under 160 characters" : "professional email"} to ${name || "the recipient"} with a ${toneMap[tone] || "professional and warm"} tone. Context: ${context}. Sign as Darwin McCulloch. Return only the message text, nothing else.`;
   }
   try {
-    const bodyStr = JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: prompt }] });
+    const bodyStr = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 500, messages: [{ role: "user", content: prompt }] });
     const result = await new Promise((resolve, reject) => {
       const r = require("https").request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => {
         let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d }));
@@ -135,9 +135,11 @@ app.post("/draft", async (req, res) => {
       r.on("error", reject); r.write(bodyStr); r.end();
     });
     const data = JSON.parse(result.body);
-    if (data.error) return res.status(400).json({ error: data.error.message });
-    const text = data.content.find(b => b.type === "text").text;
-    res.json({ success: true, message: text });
+    if (data.error) return res.status(400).json({ error: data.error.message || JSON.stringify(data.error) });
+    if (!data.content || !data.content.length) return res.status(400).json({ error: "No content returned", raw: result.body.substring(0, 200) });
+    const text = data.content.find(b => b.type === "text");
+    if (!text) return res.status(400).json({ error: "No text block found", raw: result.body.substring(0, 200) });
+    res.json({ success: true, message: text.text });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
