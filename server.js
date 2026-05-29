@@ -116,11 +116,16 @@ app.post("/push", async (req, res) => {
 
 // DRAFT endpoint — Claude message drafting for Communication Agent
 app.post("/draft", async (req, res) => {
-  const { name, context, tone, channel } = req.body;
+  const { name, context, tone, channel, raw } = req.body;
   if (!context) return res.status(400).json({ error: "Missing context" });
-  const toneMap = { professional: "professional and warm", urgent: "urgent but respectful", nurture: "gentle and helpful", confirmation: "clear and reassuring", proposal: "confident and professional" };
-  const isShort = channel === "sms" || channel === "whatsapp";
-  const prompt = `You are the Communication Agent for Darwin McCulloch, a Belize-based strategy consultant and tour operator. Write a ${isShort ? "short SMS under 160 characters" : "professional email"} to ${name || "the recipient"} with a ${toneMap[tone] || "professional and warm"} tone. Context: ${context}. Sign as Darwin McCulloch. Return only the message text, nothing else.`;
+  let prompt;
+  if (raw) {
+    prompt = context;
+  } else {
+    const toneMap = { professional: "professional and warm", urgent: "urgent but respectful", nurture: "gentle and helpful", confirmation: "clear and reassuring", proposal: "confident and professional" };
+    const isShort = channel === "sms" || channel === "whatsapp";
+    prompt = `You are the Communication Agent for Darwin McCulloch, a Belize-based strategy consultant and tour operator. Write a ${isShort ? "short SMS under 160 characters" : "professional email"} to ${name || "the recipient"} with a ${toneMap[tone] || "professional and warm"} tone. Context: ${context}. Sign as Darwin McCulloch. Return only the message text, nothing else.`;
+  }
   try {
     const bodyStr = JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, messages: [{ role: "user", content: prompt }] });
     const result = await new Promise((resolve, reject) => {
