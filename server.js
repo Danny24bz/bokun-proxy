@@ -99,4 +99,18 @@ app.post("/push", async (req, res) => {
     bookingType: "DATE_AND_TIME",
     capacityType: "LIMITED",
     capacity: capacity,
-    meetingType: { type: "MEET_ON_LOCAT
+    meetingType: { type: "MEET_ON_LOCATION", meetingPointAddresses: [{ title: meetPt, address: { addressLine1: meetPt, city: "Belize City", countryCode: "BZ" } }], dropoffService: false },
+    boxSettings: { isBox: false },
+    activation: { active: false },
+    pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
+    rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: adultAmt, currency: "USD" } }, { id: 1153187, amount: { amount: childAmt, currency: "USD" } }] }] },
+    availabilityRules: [{ frequency: "DAILY", startTime: "08:00", capacity: capacity }]
+  };
+  try {
+    const result = await bokunPost(path, payload);
+    let json; try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
+    res.status(result.status).json(json);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
