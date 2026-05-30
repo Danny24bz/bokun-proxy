@@ -103,7 +103,7 @@ app.post("/push", async (req, res) => {
     capacityType: "LIMITED",
     meetingType: { type: "MEET_ON_LOCATION", meetingPointAddresses: [{ title: meetPt, address: { addressLine1: meetPt, city: "Belize City", countryCode: "BZ" } }], dropoffService: false },
     boxSettings: { isBox: false },
-    activation: { active: false },
+    activation: { activated: false },
     pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
     rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: adultAmt, currency: "USD" } }, { id: 1153187, amount: { amount: childAmt, currency: "USD" } }] }] },
     availabilityRules: [{ frequency: "DAILY", startTime: "08:00", capacity: capacity }]
@@ -187,7 +187,7 @@ app.post("/push-reseller", async (req, res) => {
       capacityType: "LIMITED",
       meetingType: { type: "MEET_ON_LOCATION", meetingPointAddresses: [{ title: "Meeting point provided upon booking", address: { addressLine1: "Meeting point provided upon booking", city: product.city || "Destination", countryCode: product.countryCode || "US" } }], dropoffService: false },
       boxSettings: { isBox: false },
-      activation: { active: false },
+      activation: { activated: false },
       pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
       rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: product.adultPrice || 15000, currency: "USD" } }, { id: 1153187, amount: { amount: product.childPrice || 10000, currency: "USD" } }] }] },
       availabilityRules: [{ frequency: "DAILY", startTime: "09:00", capacity: 10 }],
