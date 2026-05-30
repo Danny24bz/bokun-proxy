@@ -112,7 +112,7 @@ app.post("/push", async (req, res) => {
     boxSettings: { isBox: false },
     activation: { activated: false },
     pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
-    rates: { rates: [{ pricingCategoryIds: [1153185, 1153187], pricedPerPerson: true, allPricingCategories: false }] },
+    rates: { defaultRate: {}, rates: [{ pricingCategoryIds: [1153185, 1153187], pricedPerPerson: true, allPricingCategories: false }] },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: capacity }]
   };
   try {
