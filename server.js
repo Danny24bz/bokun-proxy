@@ -106,7 +106,7 @@ app.post("/push", async (req, res) => {
     activation: { activated: false },
     pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
     rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricingCategoryIds: [1153185, 1153187], pricedPerPerson: true, allPricingCategories: false }] },
-    availabilityRules: [{ recurrenceRule: { freq: "DAILY" }, startTimes: ["08:00"], maxCapacity: capacity }]
+    availabilityRules: [{ recurrenceRule: {}, startTimes: ["08:00"], maxCapacity: capacity }]
   };
   try {
     const result = await bokunPost(path, payload);
@@ -190,7 +190,7 @@ app.post("/push-reseller", async (req, res) => {
       activation: { activated: false },
       pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
       rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: product.adultPrice || 15000, currency: "USD" } }, { id: 1153187, amount: { amount: product.childPrice || 10000, currency: "USD" } }] }] },
-      availabilityRules: [{ recurrenceRule: { freq: "DAILY" }, startTimes: ["09:00"], maxCapacity: 10 }],
+      availabilityRules: [{ recurrenceRule: {}, startTimes: ["09:00"], maxCapacity: 10 }],
       resellerProductId: product.sourceId
     };
     
