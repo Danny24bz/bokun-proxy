@@ -105,7 +105,7 @@ app.post("/push", async (req, res) => {
     boxSettings: { isBox: false },
     activation: { activated: false },
     pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
-    rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: adultAmt, currency: "USD" } }, { id: 1153187, amount: { amount: childAmt, currency: "USD" } }] }] },
+    rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricingCategoryIds: [1153185, 1153187], pricedPerPerson: true, allPricingCategories: false }] },
     availabilityRules: [{ frequency: "DAILY", startTime: "08:00", capacity: capacity }]
   };
   try {
