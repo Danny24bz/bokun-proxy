@@ -232,4 +232,19 @@ app.get("/storefront", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// GET FULL PRODUCT STRUCTURE — returns complete payload of reference product
+app.get("/getfullproduct", async (req, res) => {
+  try {
+    const componentTypes = [
+      "BASIC_INFO", "PRICING_CATEGORIES", "RATES", "START_TIMES",
+      "AVAILABILITY_RULES", "MEETING_TYPE", "TICKET", "CUTOFF",
+      "BOOKING_SETTINGS", "ACTIVATION"
+    ];
+    const query = componentTypes.map(t => "componentType=" + t).join("&");
+    const result = await bokunGet("/restapi/v2.0/experience/1195229/components?" + query);
+    res.status(result.status).send(result.body);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
