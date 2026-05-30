@@ -236,13 +236,7 @@ app.get("/storefront", async (req, res) => {
 // GET FULL PRODUCT STRUCTURE — returns complete payload of reference product
 app.get("/getfullproduct", async (req, res) => {
   try {
-    const componentTypes = [
-      "BASIC_INFO", "PRICING_CATEGORIES", "RATES", "START_TIMES",
-      "AVAILABILITY_RULES", "MEETING_TYPE", "TICKET", "CUTOFF",
-      "BOOKING_SETTINGS", "ACTIVATION"
-    ];
-    const query = componentTypes.map(t => "componentType=" + t).join("&");
-    const result = await bokunGet("/restapi/v2.0/experience/1195229/components?" + query);
+    const result = await bokunGet("/restapi/v2.0/experience/1195229/components?componentType=PRICING_CATEGORIES&componentType=RATES&componentType=START_TIMES&componentType=AVAILABILITY_RULES&componentType=MEETING_TYPE&componentType=TICKET&componentType=CUTOFF&componentType=ACTIVATION");
     res.status(result.status).send(result.body);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
