@@ -166,4 +166,55 @@ app.post("/sms", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// PUSH RESELLER PRODUCTS — Push accepted contract products to Bokun storefront
+app.post("/push-reseller", async (req, res) => {
+  const { products } = req.body;
+  if (!products || !Array.isArray(products)) return res.status(400).json({ error: "Missing products array" });
+  
+  const results = [];
+  
+  for (const product of products) {
+    const payload = {
+      title: product.title,
+      shortDescription: `Professional photography experience in ${product.location || "top destination"}. Capture your memories with a skilled photographer.`,
+      description: `Book a professional photographer for a memorable photo shoot experience. Perfect for couples, families, solo travelers and special occasions. All photos delivered digitally.`,
+      duration: { hours: 1, minutes: 0 },
+      location: { name: product.location || "Destination", city: product.city || "Destination", countryCode: product.countryCode || "US" },
+      bookingType: "DATE_AND_TIME",
+      capacityType: "LIMITED",
+      capacity: 10,
+      meetingType: { type: "MEET_ON_LOCATION", meetingPointAddresses: [{ title: "Meeting point provided upon booking", address: { addressLine1: "Meeting point provided upon booking", city: product.city || "Destination", countryCode: product.countryCode || "US" } }], dropoffService: false },
+      boxSettings: { isBox: false },
+      activation: { active: false },
+      pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
+      rates: { defaultRate: { id: 2364854 }, rates: [{ id: 2364854, pricesByCategory: [{ id: 1153185, amount: { amount: product.adultPrice || 15000, currency: "USD" } }, { id: 1153187, amount: { amount: product.childPrice || 10000, currency: "USD" } }] }] },
+      availabilityRules: [{ frequency: "DAILY", startTime: "09:00", capacity: 10 }],
+      resellerProductId: product.sourceId
+    };
+    
+    try {
+      const result = await bokunPost("/restapi/v2.0/experience", payload);
+      let json;
+      try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
+      results.push({ title: product.title, status: result.status, bokun_id: json.id || json.experienceId || null, error: json.error || null });
+    } catch (e) {
+      results.push({ title: product.title, status: 500, error: e.message });
+    }
+  }
+  
+  const success = results.filter(r => r.status === 200 || r.status === 201).length;
+  const failed = results.filter(r => r.status !== 200 && r.status !== 201).length;
+  
+  res.json({ success: true, total: results.length, pushed: success, failed, results });
+});
+
+// GET RESELLER PRODUCTS STATUS
+app.get("/storefront", async (req, res) => {
+  try {
+    const result = await bokunGet("/restapi/v2.0/experience/list?vendorId=137489&pageSize=50");
+    res.status(result.status).send(result.body);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
