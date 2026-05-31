@@ -187,4 +187,95 @@ app.post("/sms", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// EMAIL endpoint — Send email via darwin@dvarix.com Gmail SMTP
+app.post("/email", async (req, res) => {
+  const { to, subject, body, name } = req.body;
+  if (!to || !body) return res.status(400).json({ error: "Missing to or body" });
+
+  const GMAIL_USER = process.env.GMAIL_USER || "darwin@dvarix.com";
+  const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD;
+
+  if (!GMAIL_PASS) return res.status(400).json({ error: "Gmail credentials not configured" });
+
+  const emailSubject = subject || "Message from Darwin McCulloch";
+  const boundary = "----=_Part_" + Date.now();
+
+  const message = [
+    "From: Darwin McCulloch <" + GMAIL_USER + ">",
+    "To: " + to,
+    "Subject: " + emailSubject,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    body
+  ].join("\r\n");
+
+  const encodedMessage = Buffer.from(message).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  try {
+    const auth = Buffer.from(GMAIL_USER + "\0" + GMAIL_USER + "\0" + GMAIL_PASS.replace(/\s/g, "")).toString("base64");
+
+    const result = await new Promise((resolve, reject) => {
+      const postData = JSON.stringify({ raw: encodedMessage });
+      const authHeader = "Basic " + Buffer.from(GMAIL_USER + ":" + GMAIL_PASS.replace(/\s/g, "")).toString("base64");
+
+      // Use Gmail API via SMTP
+      const net = require("net");
+      const tls = require("tls");
+
+      const smtpHost = "smtp.gmail.com";
+      const smtpPort = 465;
+
+      const socket = tls.connect(smtpPort, smtpHost, { rejectUnauthorized: false }, () => {
+        let response = "";
+        const send = (cmd) => socket.write(cmd + "\r\n");
+
+        socket.on("data", (data) => {
+          response += data.toString();
+          const lines = response.split("\r\n").filter(l => l);
+          const last = lines[lines.length - 1];
+
+          if (last.startsWith("220 ") && !response.includes("EHLO")) {
+            send("EHLO dvarix.com");
+          } else if (last.startsWith("250 ") && response.includes("EHLO") && !response.includes("AUTH")) {
+            send("AUTH LOGIN");
+          } else if (last.startsWith("334 VXNlcm5hbWU6")) {
+            send(Buffer.from(GMAIL_USER).toString("base64"));
+          } else if (last.startsWith("334 UGFzc3dvcmQ6")) {
+            send(Buffer.from(GMAIL_PASS.replace(/\s/g, "")).toString("base64"));
+          } else if (last.startsWith("235")) {
+            send("MAIL FROM:<" + GMAIL_USER + ">");
+          } else if (last.startsWith("250") && response.includes("235")) {
+            if (!response.includes("RCPT TO")) {
+              send("RCPT TO:<" + to + ">");
+            } else if (!response.includes("DATA")) {
+              send("DATA");
+            }
+          } else if (last.startsWith("354")) {
+            send("From: Darwin McCulloch <" + GMAIL_USER + ">");
+            send("To: " + to);
+            send("Subject: " + emailSubject);
+            send("Content-Type: text/plain; charset=UTF-8");
+            send("");
+            send(body);
+            send(".");
+          } else if (last.startsWith("250") && response.includes("354")) {
+            send("QUIT");
+            resolve({ success: true, message: "Email sent to " + to });
+          } else if (last.startsWith("5")) {
+            reject(new Error("SMTP error: " + last));
+          }
+        });
+
+        socket.on("error", reject);
+      });
+    });
+
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
