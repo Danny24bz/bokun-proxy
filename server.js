@@ -188,35 +188,37 @@ app.post("/sms", async (req, res) => {
 });
 
 
-// EMAIL endpoint — Send email via darwin@dvarix.com using Nodemailer
+// EMAIL endpoint — Send via Gmail API using Google Workspace darwin@dvarix.com
 app.post("/email", async (req, res) => {
   const { to, subject, body } = req.body;
   if (!to || !body) return res.status(400).json({ error: "Missing to or body" });
 
-  const nodemailer = require("nodemailer");
   const GMAIL_USER = process.env.GMAIL_USER || "darwin@dvarix.com";
   const GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
 
-  if (!GMAIL_PASS) return res.status(400).json({ error: "Gmail credentials not configured" });
+  if (!GMAIL_PASS) return res.status(400).json({ error: "Gmail app password not configured" });
 
   try {
+    const nodemailer = require("nodemailer");
+    
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000
+      port: 465,
+      secure: true,
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_PASS
+      }
     });
 
-    await transporter.sendMail({
-      from: "Darwin McCulloch <" + GMAIL_USER + ">",
+    const info = await transporter.sendMail({
+      from: \`"Darwin McCulloch" <\${GMAIL_USER}>\`,
       to,
       subject: subject || "Message from Darwin McCulloch — Dvarix",
       text: body
     });
 
-    res.json({ success: true, message: "Email sent from " + GMAIL_USER });
+    res.json({ success: true, messageId: info.messageId, message: "Email sent from " + GMAIL_USER });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
