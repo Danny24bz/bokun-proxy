@@ -188,7 +188,7 @@ app.post("/sms", async (req, res) => {
 });
 
 
-// EMAIL endpoint — Send via Gmail API using Google Workspace darwin@dvarix.com
+// EMAIL endpoint — Send via Google Workspace darwin@dvarix.com
 app.post("/email", async (req, res) => {
   const { to, subject, body } = req.body;
   if (!to || !body) return res.status(400).json({ error: "Missing to or body" });
@@ -200,20 +200,16 @@ app.post("/email", async (req, res) => {
 
   try {
     const nodemailer = require("nodemailer");
-    
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
-      auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_PASS
-      }
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS }
     });
 
     const info = await transporter.sendMail({
-      from: \`"Darwin McCulloch" <\${GMAIL_USER}>\`,
-      to,
+      from: "Darwin McCulloch <" + GMAIL_USER + ">",
+      to: to,
       subject: subject || "Message from Darwin McCulloch — Dvarix",
       text: body
     });
