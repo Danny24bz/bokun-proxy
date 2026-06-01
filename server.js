@@ -219,4 +219,4 @@ app.post("/email", async (req, res) => {
 });
 
 
-app.listenapp.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
+app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
