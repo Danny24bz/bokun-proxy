@@ -188,72 +188,35 @@ app.post("/sms", async (req, res) => {
 });
 
 
-// EMAIL endpoint — Send email via darwin@dvarix.com using Gmail SMTP
+// EMAIL endpoint — Send email via darwin@dvarix.com using Nodemailer
 app.post("/email", async (req, res) => {
   const { to, subject, body } = req.body;
   if (!to || !body) return res.status(400).json({ error: "Missing to or body" });
 
+  const nodemailer = require("nodemailer");
   const GMAIL_USER = process.env.GMAIL_USER || "darwin@dvarix.com";
   const GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
 
   if (!GMAIL_PASS) return res.status(400).json({ error: "Gmail credentials not configured" });
 
-  const tls = require("tls");
-  const emailSubject = subject || "Message from Darwin McCulloch — Dvarix";
-
   try {
-    await new Promise((resolve, reject) => {
-      const socket = tls.connect(465, "smtp.gmail.com", { rejectUnauthorized: false }, () => {
-        const cmds = [];
-        let step = 0;
-
-        const next = () => {
-          if (step < cmds.length) {
-            socket.write(cmds[step++] + "\r\n");
-          }
-        };
-
-        cmds.push(
-          "EHLO dvarix.com",
-          "AUTH LOGIN",
-          Buffer.from(GMAIL_USER).toString("base64"),
-          Buffer.from(GMAIL_PASS).toString("base64"),
-          "MAIL FROM:<" + GMAIL_USER + ">",
-          "RCPT TO:<" + to + ">",
-          "DATA",
-          "From: Darwin McCulloch <" + GMAIL_USER + ">\r\nTo: " + to + "\r\nSubject: " + emailSubject + "\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body + "\r\n.",
-          "QUIT"
-        );
-
-        let buffer = "";
-        socket.on("data", (data) => {
-          buffer += data.toString();
-          const lines = buffer.split("\r\n");
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (line.startsWith("220") && step === 0) next();
-            else if (line.startsWith("250") && step === 1) next();
-            else if (line.startsWith("334 VXNl")) next();
-            else if (line.startsWith("334 UGFz")) next();
-            else if (line.startsWith("235")) next();
-            else if (line.startsWith("250") && step >= 5 && step < 7) next();
-            else if (line.startsWith("354")) next();
-            else if (line.startsWith("250") && step === 8) next();
-            else if (line.startsWith("221")) { socket.end(); resolve(); }
-            else if (line.startsWith("5")) { socket.end(); reject(new Error(line)); }
-          }
-        });
-
-        socket.on("error", reject);
-        socket.on("connect", () => {});
-      });
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS }
     });
 
-    res.json({ success: true, message: "Email sent from " + GMAIL_USER + " to " + to });
+    await transporter.sendMail({
+      from: "Darwin McCulloch <" + GMAIL_USER + ">",
+      to,
+      subject: subject || "Message from Darwin McCulloch — Dvarix",
+      text: body
+    });
+
+    res.json({ success: true, message: "Email sent from " + GMAIL_USER });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 app.listenapp.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
