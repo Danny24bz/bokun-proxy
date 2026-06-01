@@ -1,14 +1,15 @@
 {
   "name": "bokun-proxy",
   "version": "1.0.1",
-  "description": "Proxy server for Bókun API",
+  "description": "Proxy server for B\u00f3kun API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.0"
   },
   "engines": {
     "node": ">=18.0.0"
