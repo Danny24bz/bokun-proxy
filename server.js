@@ -138,7 +138,8 @@ app.post("/push", async (req, res) => {
         pricingCategoryIds: [1153185, 1153187],
         pricedPerPerson: true,
         allPricingCategories: false,
-        allStartTimes: true
+        allStartTimes: true,
+        tieredPricingEnabled: false
       }]
     },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: 14 }]
