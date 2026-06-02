@@ -134,6 +134,7 @@ app.post("/push", async (req, res) => {
         title: "Standard Rate",
         description: "Standard rate for this experience",
         externalId: "default-rate",
+        cancellationPolicyId: 258744,
         pricingCategoryIds: [1153185, 1153187],
         pricedPerPerson: true,
         allPricingCategories: true
