@@ -144,8 +144,8 @@ app.post("/push", async (req, res) => {
     },
     pricing: {
       experiencePriceRules: [
-        { pricingCategoryId: 1153185, rateId: null, price: { amount: adultAmt, currency: "USD" } },
-        { pricingCategoryId: 1153187, rateId: null, price: { amount: childAmt, currency: "USD" } }
+        { pricingCategoryId: 1153185, amount: adultAmt, currency: "USD" },
+        { pricingCategoryId: 1153187, amount: childAmt, currency: "USD" }
       ]
     },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: 14 }]
