@@ -128,7 +128,17 @@ app.post("/push", async (req, res) => {
     boxSettings: { isBox: false },
     activation: { activated: false },
     pricingCategories: { defaultId: 1153185, ids: [1153185, 1153187] },
-    rates: { defaultRate: { id: 2364854 }, rates: [{ pricingCategoryIds: [1153185, 1153187], pricedPerPerson: true, allPricingCategories: true }] },
+    rates: {
+      defaultRate: { externalId: "default-rate" },
+      rates: [{
+        title: "Standard Rate",
+        description: "Standard rate for this experience",
+        externalId: "default-rate",
+        pricingCategoryIds: [1153185, 1153187],
+        pricedPerPerson: true,
+        allPricingCategories: true
+      }]
+    },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: 14 }]
   };
 
