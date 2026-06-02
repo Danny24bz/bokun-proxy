@@ -136,7 +136,8 @@ app.post("/push", async (req, res) => {
         externalId: "default-rate",
         cancellationPolicyId: 258744,
         pricingCategoryIds: [1153185, 1153187],
-        pricedPerPerson: true
+        pricedPerPerson: true,
+        allPricingCategories: false
       }]
     },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: 14 }]
