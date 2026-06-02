@@ -143,6 +143,7 @@ app.post("/push", async (req, res) => {
       }]
     },
     pricing: {
+      priceCatalogCurrencies: [{ priceCatalogId: 157725, currencies: ["USD"], defaultCurrency: "USD" }],
       experiencePriceRules: [
         { pricingCategoryId: 1153185, amount: adultAmt, currency: "USD", priceCatalogId: 157725, rate: { externalId: "default-rate" } },
         { pricingCategoryId: 1153187, amount: childAmt, currency: "USD", priceCatalogId: 157725, rate: { externalId: "default-rate" } }
