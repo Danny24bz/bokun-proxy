@@ -240,4 +240,13 @@ app.post("/email", async (req, res) => {
 });
 
 
+
+// GET PRICING — fetch pricing component from reference product
+app.get("/getpricing", async (req, res) => {
+  try {
+    const result = await bokunGet("/restapi/v2.0/experience/1195229/components?componentType=PRICING");
+    res.status(result.status).send(result.body);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
