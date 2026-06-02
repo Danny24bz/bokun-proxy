@@ -142,6 +142,13 @@ app.post("/push", async (req, res) => {
         tieredPricingEnabled: false
       }]
     },
+    pricing: {
+      defaultPricingCategoryId: 1153185,
+      pricingCategories: [
+        { id: 1153185, price: { amount: adultAmt, currency: "USD" } },
+        { id: 1153187, price: { amount: childAmt, currency: "USD" } }
+      ]
+    },
     availabilityRules: [{ recurrenceRule: {}, allStartTimes: true, maxCapacity: 14 }]
   };
 
