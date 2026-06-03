@@ -45,7 +45,7 @@ function bokunPost(path, body) {
   });
 }
 
-app.get("/", (_, res) => res.json({ status: "ok", service: "Bokun Proxy", version: "2.0" }));
+app.get("/", (_, res) => res.json({ status: "ok", service: "Bokun Proxy", version: "2.1" }));
 
 app.get("/getproduct", async (req, res) => {
   try {
