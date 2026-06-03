@@ -251,4 +251,24 @@ app.get("/getpricing", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// ACTIVATE endpoint — activate a product in Bokun
+app.post("/activate", async (req, res) => {
+  const { productId } = req.body;
+  if (!productId) return res.status(400).json({ error: "Missing productId" });
+  try {
+    const result = await bokunPost("/restapi/v2.0/experience/" + productId + "/activation", { activated: true });
+    let json; try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
+    res.status(result.status).json({ success: result.status === 200, productId, status: result.status, data: json });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// LIST PRODUCTS endpoint — list all vendor products
+app.get("/listproducts", async (req, res) => {
+  try {
+    const result = await bokunGet("/restapi/v2.0/experience/list?vendorId=137489&pageSize=50");
+    res.status(result.status).send(result.body);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
