@@ -63,7 +63,7 @@ app.get("/getfullproduct", async (req, res) => {
 
 app.get("/storefront", async (req, res) => {
   try {
-    const result = await bokunGet("/restapi/v2.0/experience/list?vendorId=137489&pageSize=50");
+    const result = await bokunGet("/restapi/v2.0/experience/vendor/137489/list?pageSize=50");
     res.status(result.status).send(result.body);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -266,7 +266,7 @@ app.post("/activate", async (req, res) => {
 // LIST PRODUCTS endpoint — list all vendor products
 app.get("/listproducts", async (req, res) => {
   try {
-    const result = await bokunGet("/restapi/v2.0/experience/list?vendorId=137489&pageSize=50");
+    const result = await bokunGet("/restapi/v2.0/experience/vendor/137489/list?pageSize=50");
     res.status(result.status).send(result.body);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
