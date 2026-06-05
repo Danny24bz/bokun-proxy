@@ -157,6 +157,9 @@ app.post("/push", async (req, res) => {
     const result = await bokunPost(path, payload);
     console.log("Bokun:", result.status, result.body.substring(0, 300));
     let json; try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
+    if ((result.status === 200 || result.status === 201) && json.id) {
+      pushedProductIds.push(json.id);
+    }
     res.status(result.status).json(json);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -263,12 +266,13 @@ app.post("/activate", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// LIST PRODUCTS endpoint — list all vendor products
+// LIST PRODUCTS endpoint — returns pushed product IDs stored in memory
+const pushedProductIds = [];
 app.get("/listproducts", async (req, res) => {
-  try {
-    const result = await bokunGet("/restapi/v2.0/experience/vendor/137489/list?pageSize=50");
-    res.status(result.status).send(result.body);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  if (pushedProductIds.length === 0) {
+    return res.json({ products: [], message: "No products tracked yet — push products first" });
+  }
+  res.json({ products: pushedProductIds.map(id => ({ id, activated: false })) });
 });
 
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
