@@ -159,6 +159,13 @@ app.post("/push", async (req, res) => {
     let json; try { json = JSON.parse(result.body); } catch { json = { raw: result.body }; }
     if ((result.status === 200 || result.status === 201) && json.id) {
       pushedProductIds.push(json.id);
+      // Auto-activate immediately after push
+      try {
+        await bokunPost("/restapi/v2.0/experience/" + json.id + "/activation", { activated: true });
+        json.activated = true;
+      } catch(activateErr) {
+        json.activationError = activateErr.message;
+      }
     }
     res.status(result.status).json(json);
   } catch (e) { res.status(500).json({ error: e.message }); }
