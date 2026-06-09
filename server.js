@@ -282,4 +282,24 @@ app.get("/listproducts", async (req, res) => {
   res.json({ products: pushedProductIds.map(id => ({ id, activated: false })) });
 });
 
+// NEW AI ENDPOINT
+app.post("/ai", async (req, res) => {
+  const { prompt, maxTokens, system } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Missing prompt" });
+  try {
+    const bodyObj = { model: "claude-sonnet-4-6", max_tokens: maxTokens || 2000, messages: [{ role: "user", content: prompt }] };
+    if (system) bodyObj.system = system;
+    const bodyStr = JSON.stringify(bodyObj);
+    const result = await new Promise((resolve, reject) => {
+      const r = https.request({ hostname: "api.anthropic.com", path: "/v1/messages", method: "POST", headers: { "Content-Type": "application/json", "x-api-key": (ANTHROPIC_KEY || "").trim(), "anthropic-version": "2023-06-01", "Content-Length": Buffer.byteLength(bodyStr) } }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => resolve({ status: res.statusCode, body: d })); });
+      r.on("error", reject); r.write(bodyStr); r.end();
+    });
+    const data = JSON.parse(result.body);
+    if (data.error) return res.status(400).json({ error: data.error.message });
+    const text = data.content.find(b => b.type === "text");
+    if (!text) return res.status(400).json({ error: "No text returned" });
+    res.json({ success: true, text: text.text });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(process.env.PORT || 3000, () => console.log("Bokun proxy running"));
